@@ -1,0 +1,48 @@
+<%@page import="com.rentatools.model.Usuario"%>
+<%@page import="com.rentatools.util.Html"%>
+<%
+    // Cada pagina define antes: String tituloPagina, String menuActivo
+    Usuario actual = (Usuario) request.getAttribute("actual");
+    boolean esAdmin = actual != null && "ADMIN".equals(actual.getRol());
+    String ctx = request.getContextPath();
+    String[] proximos = {"Clientes", "Equipos", "Alquileres", "Devoluciones"};
+%>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title><%= Html.esc(tituloPagina) %> | RentaTools</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="<%= ctx %>/css/dashboard.css" rel="stylesheet">
+</head>
+<body>
+<div class="app">
+
+    <aside class="sidebar" id="sidebar">
+        <div class="logo">Renta<span>Tools</span></div>
+        <nav class="nav flex-column" aria-label="Menú principal">
+            <a class="nav-link <%= "inicio".equals(menuActivo) ? "active" : "" %>" href="<%= ctx %>/inicio">Inicio</a>
+            <% if (esAdmin) { %>
+            <a class="nav-link <%= "usuarios".equals(menuActivo) ? "active" : "" %>" href="<%= ctx %>/usuarios">Usuarios</a>
+            <% } %>
+            <% for (String m : proximos) { %>
+            <span class="nav-link disabled"><%= m %> <span class="pronto">Pronto</span></span>
+            <% } %>
+            <% if (esAdmin) { %>
+            <span class="nav-link disabled">Reportes <span class="pronto">Pronto</span></span>
+            <% } %>
+        </nav>
+    </aside>
+
+    <div class="contenido">
+        <header class="topbar">
+            <button type="button" class="btn btn-outline-primary btn-sm d-lg-none" id="btnMenu">Menú</button>
+            <span class="ms-auto">Bienvenido, <strong><%= Html.esc(actual.getNombres()) %></strong>
+                <span class="rol"><%= Html.esc(actual.getRol()) %></span></span>
+            <a class="btn btn-outline-primary btn-sm" href="<%= ctx %>/logout">Cerrar sesión</a>
+        </header>
+
+        <main class="p-4">
