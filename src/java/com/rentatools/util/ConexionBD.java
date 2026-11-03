@@ -9,9 +9,10 @@ import java.sql.SQLException;
 import java.util.Properties;
 
 /**
- * Patron creacional SINGLETON (Etapa 3).
- * Garantiza que exista una unica instancia de ConexionBD en toda la aplicacion
- * y que esa instancia reutilice una sola conexion a la base de datos.
+ * Patron creacional SINGLETON.
+ * Una unica instancia de ConexionBD y una unica conexion compartida para las consultas simples.
+ * Para operaciones con TRANSACCION se usa nuevaConexion(): una conexion propia, que no se
+ * comparte, para que otras peticiones no queden dentro de la misma transaccion.
  *
  * Credenciales (no van en el codigo), en este orden:
  *   1) Variables de entorno: DB_URL, DB_USER, DB_PASS
@@ -19,17 +20,14 @@ import java.util.Properties;
  */
 public final class ConexionBD {
 
-    // 1) Atributo estatico privado: guarda la unica instancia
     private static ConexionBD instancia;
 
-    // 2) La unica conexion compartida
     private Connection conexion;
 
     private final String url;
     private final String user;
     private final String pass;
 
-    // 3) Constructor PRIVADO: nadie fuera de la clase puede hacer "new ConexionBD()"
     private ConexionBD() {
         Properties archivo = cargarArchivo();
         this.url = valor("DB_URL", archivo);
@@ -37,7 +35,6 @@ public final class ConexionBD {
         this.pass = valor("DB_PASS", archivo);
     }
 
-    // 4) Punto de acceso global: crea la instancia solo la primera vez
     public static synchronized ConexionBD getInstancia() {
         if (instancia == null) {
             instancia = new ConexionBD();
@@ -45,21 +42,17 @@ public final class ConexionBD {
         return instancia;
     }
 
-    // 5) Entrega la conexion; si se cerro o caduco (Supabase la corta por inactividad), se reconecta
+    /** Conexion compartida (Singleton). No la cierre quien la usa. */
     public synchronized Connection getConexion() throws SQLException {
-        if (url == null || user == null || pass == null) {
-            throw new SQLException("Faltan DB_URL, DB_USER o DB_PASS "
-                    + "(variables de entorno o archivo rentatools.properties)");
-        }
         if (conexion == null || conexion.isClosed() || !conexion.isValid(2)) {
-            try {
-                Class.forName("org.postgresql.Driver");
-            } catch (ClassNotFoundException e) {
-                throw new SQLException("No se encontro el driver (postgresql-42.x.jar)", e);
-            }
-            conexion = DriverManager.getConnection(url, user, pass);
+            conexion = abrirConexion();
         }
         return conexion;
+    }
+
+    /** Conexion independiente para transacciones. Quien la pide debe cerrarla (try-with-resources). */
+    public Connection nuevaConexion() throws SQLException {
+        return abrirConexion();
     }
 
     public synchronized void cerrar() {
@@ -70,6 +63,19 @@ public final class ConexionBD {
         } catch (SQLException ignorada) {
         }
         conexion = null;
+    }
+
+    private Connection abrirConexion() throws SQLException {
+        if (url == null || user == null || pass == null) {
+            throw new SQLException("Faltan DB_URL, DB_USER o DB_PASS "
+                    + "(variables de entorno o archivo rentatools.properties)");
+        }
+        try {
+            Class.forName("org.postgresql.Driver");
+        } catch (ClassNotFoundException e) {
+            throw new SQLException("No se encontro el driver (postgresql-42.x.jar)", e);
+        }
+        return DriverManager.getConnection(url, user, pass);
     }
 
     // ---------- Lectura de credenciales ----------
@@ -91,18 +97,23 @@ public final class ConexionBD {
         return (v == null || v.isEmpty()) ? archivo.getProperty(clave) : v;
     }
 
-    // Prueba rapida: clic derecho -> Run File. Comprueba tambien que sea una unica instancia.
+    // Prueba rapida: clic derecho -> Run File
     public static void main(String[] args) {
         ConexionBD a = ConexionBD.getInstancia();
         ConexionBD b = ConexionBD.getInstancia();
-        System.out.println("¿Misma instancia?: " + (a == b));
+        System.out.println("Misma instancia?: " + (a == b));
         try {
             Connection c1 = a.getConexion();
             Connection c2 = b.getConexion();
-            System.out.println("¿Misma conexion?: " + (c1 == c2));
+            System.out.println("Misma conexion?: " + (c1 == c2));
             System.out.println("Conexion exitosa a: " + c1.getCatalog());
         } catch (SQLException e) {
             System.out.println("Error de conexion: " + e.getMessage());
+            Throwable c = e.getCause();
+            while (c != null) {
+                System.out.println("  Causa: " + c);
+                c = c.getCause();
+            }
         }
     }
 }

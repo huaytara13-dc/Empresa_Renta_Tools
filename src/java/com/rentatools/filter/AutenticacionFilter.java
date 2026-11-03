@@ -15,12 +15,14 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 
 /**
- * Protege /inicio y /usuarios:
+ * Protege las paginas internas (/inicio, /usuarios, /clientes, /equipos, /alquileres, /devoluciones):
  *  - exige sesion iniciada;
- *  - vuelve a leer al usuario en la BD en cada peticion (si lo desactivan, pierde el acceso);
- *  - evita que el navegador guarde las paginas (boton "Atras" tras cerrar sesion).
+ *  - vuelve a leer al usuario en la BD en cada peticion;
+ *  - evita que el navegador guarde las paginas.
+ * Al crear un modulo nuevo, se agrega su ruta a urlPatterns.
  */
-@WebFilter(filterName = "AutenticacionFilter", urlPatterns = {"/inicio", "/usuarios"})
+@WebFilter(filterName = "AutenticacionFilter",
+           urlPatterns = {"/inicio", "/usuarios", "/clientes", "/equipos", "/alquileres", "/devoluciones"})
 public class AutenticacionFilter implements Filter {
 
     private final UsuarioService servicio = new UsuarioService();

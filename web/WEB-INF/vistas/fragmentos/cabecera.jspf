@@ -5,7 +5,7 @@
     Usuario actual = (Usuario) request.getAttribute("actual");
     boolean esAdmin = actual != null && "ADMIN".equals(actual.getRol());
     String ctx = request.getContextPath();
-    String[] proximos = {"Clientes", "Equipos", "Alquileres", "Devoluciones"};
+    String[] proximos = {};
 %>
 <!DOCTYPE html>
 <html lang="es">
@@ -23,11 +23,15 @@
 
     <aside class="sidebar" id="sidebar">
         <div class="logo">Renta<span>Tools</span></div>
-        <nav class="nav flex-column" aria-label="MenÃº principal">
+        <nav class="nav flex-column" aria-label="Menú principal">
             <a class="nav-link <%= "inicio".equals(menuActivo) ? "active" : "" %>" href="<%= ctx %>/inicio">Inicio</a>
             <% if (esAdmin) { %>
             <a class="nav-link <%= "usuarios".equals(menuActivo) ? "active" : "" %>" href="<%= ctx %>/usuarios">Usuarios</a>
             <% } %>
+            <a class="nav-link <%= "clientes".equals(menuActivo) ? "active" : "" %>" href="<%= ctx %>/clientes">Clientes</a>
+            <a class="nav-link <%= "equipos".equals(menuActivo) ? "active" : "" %>" href="<%= ctx %>/equipos">Equipos</a>
+            <a class="nav-link <%= "alquileres".equals(menuActivo) ? "active" : "" %>" href="<%= ctx %>/alquileres">Alquileres</a>
+            <a class="nav-link <%= "devoluciones".equals(menuActivo) ? "active" : "" %>" href="<%= ctx %>/devoluciones">Devoluciones</a>
             <% for (String m : proximos) { %>
             <span class="nav-link disabled"><%= m %> <span class="pronto">Pronto</span></span>
             <% } %>
@@ -39,10 +43,10 @@
 
     <div class="contenido">
         <header class="topbar">
-            <button type="button" class="btn btn-outline-primary btn-sm d-lg-none" id="btnMenu">MenÃº</button>
+            <button type="button" class="btn btn-outline-primary btn-sm d-lg-none" id="btnMenu">Menú</button>
             <span class="ms-auto">Bienvenido, <strong><%= Html.esc(actual.getNombres()) %></strong>
                 <span class="rol"><%= Html.esc(actual.getRol()) %></span></span>
-            <a class="btn btn-outline-primary btn-sm" href="<%= ctx %>/logout">Cerrar sesiÃ³n</a>
+            <a class="btn btn-outline-primary btn-sm" href="<%= ctx %>/logout">Cerrar sesión</a>
         </header>
 
         <main class="p-4">
