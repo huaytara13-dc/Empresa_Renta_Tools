@@ -11,6 +11,7 @@ public class Alquiler {
     private int id;
     private int clienteId;
     private int usuarioId;
+    private int solicitudId;      // 0 si es un alquiler directo
     private LocalDate fechaInicio;
     private LocalDate fechaDevolucionPrevista;
     private LocalDate fechaDevolucionReal;
@@ -36,6 +37,9 @@ public class Alquiler {
 
     public int getClienteId() { return clienteId; }
     public void setClienteId(int clienteId) { this.clienteId = clienteId; }
+
+    public int getSolicitudId() { return solicitudId; }
+    public void setSolicitudId(int solicitudId) { this.solicitudId = solicitudId; }
 
     public int getUsuarioId() { return usuarioId; }
     public void setUsuarioId(int usuarioId) { this.usuarioId = usuarioId; }

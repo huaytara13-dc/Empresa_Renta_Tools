@@ -2,13 +2,17 @@ package com.rentatools.controller;
 
 import com.rentatools.model.Alquiler;
 import com.rentatools.model.Cliente;
+import com.rentatools.model.Comprobante;
 import com.rentatools.model.Devolucion;
 import com.rentatools.model.Equipo;
+import com.rentatools.model.GuiaEntrega;
 import com.rentatools.model.Usuario;
 import com.rentatools.service.AlquilerService;
 import com.rentatools.service.ClienteService;
+import com.rentatools.service.ComprobanteService;
 import com.rentatools.service.DevolucionService;
 import com.rentatools.service.EquipoService;
+import com.rentatools.service.GuiaService;
 import com.rentatools.service.ValidacionException;
 import com.rentatools.util.CsrfUtil;
 import java.io.IOException;
@@ -38,6 +42,8 @@ public class AlquilerServlet extends HttpServlet {
     private final ClienteService clienteService = new ClienteService();
     private final EquipoService equipoService = new EquipoService();
     private final DevolucionService devolucionService = new DevolucionService();
+    private final ComprobanteService comprobanteService = new ComprobanteService();
+    private final GuiaService guiaService = new GuiaService();
 
     // ---------------------- GET ----------------------
     @Override
@@ -64,6 +70,10 @@ public class AlquilerServlet extends HttpServlet {
                         Devolucion dev = "FINALIZADO".equals(a.getEstado())
                                 ? devolucionService.obtenerPorAlquiler(a.getId()) : null;
                         request.setAttribute("devolucion", dev);
+                        Comprobante comprobante = comprobanteService.obtenerPorAlquiler(a.getId());
+                        GuiaEntrega guia = guiaService.obtenerPorAlquiler(a.getId());
+                        request.setAttribute("comprobante", comprobante);
+                        request.setAttribute("guia", guia);
                         request.setAttribute("hoy", AlquilerService.hoy());
                         request.setAttribute("csrf", CsrfUtil.token(request.getSession()));
                         consumirFlash(request);

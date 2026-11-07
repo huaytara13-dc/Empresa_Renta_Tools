@@ -30,13 +30,19 @@
             <% } %>
             <a class="nav-link <%= "clientes".equals(menuActivo) ? "active" : "" %>" href="<%= ctx %>/clientes">Clientes</a>
             <a class="nav-link <%= "equipos".equals(menuActivo) ? "active" : "" %>" href="<%= ctx %>/equipos">Equipos</a>
+            <% if (esAdmin) { %>
+            <a class="nav-link <%= "proveedores".equals(menuActivo) ? "active" : "" %>" href="<%= ctx %>/proveedores">Proveedores</a>
+            <% } %>
+            <a class="nav-link <%= "solicitudes".equals(menuActivo) ? "active" : "" %>" href="<%= ctx %>/solicitudes">Solicitudes</a>
             <a class="nav-link <%= "alquileres".equals(menuActivo) ? "active" : "" %>" href="<%= ctx %>/alquileres">Alquileres</a>
             <a class="nav-link <%= "devoluciones".equals(menuActivo) ? "active" : "" %>" href="<%= ctx %>/devoluciones">Devoluciones</a>
+            <a class="nav-link <%= "comprobantes".equals(menuActivo) ? "active" : "" %>" href="<%= ctx %>/comprobantes">Comprobantes</a>
+            <a class="nav-link <%= "guias".equals(menuActivo) ? "active" : "" %>" href="<%= ctx %>/guias">Guías de entrega</a>
             <% for (String m : proximos) { %>
             <span class="nav-link disabled"><%= m %> <span class="pronto">Pronto</span></span>
             <% } %>
             <% if (esAdmin) { %>
-            <span class="nav-link disabled">Reportes <span class="pronto">Pronto</span></span>
+            <a class="nav-link <%= "reportes".equals(menuActivo) ? "active" : "" %>" href="<%= ctx %>/reportes">Reportes</a>
             <% } %>
         </nav>
     </aside>

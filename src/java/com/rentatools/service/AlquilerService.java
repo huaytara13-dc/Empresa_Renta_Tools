@@ -3,7 +3,10 @@ package com.rentatools.service;
 import com.rentatools.model.Alquiler;
 import com.rentatools.model.Cliente;
 import com.rentatools.model.DetalleAlquiler;
+import com.rentatools.model.DetalleSolicitud;
 import com.rentatools.model.Equipo;
+import com.rentatools.model.Solicitud;
+import com.rentatools.observer.AlquilerEventos;
 import com.rentatools.repository.AlquilerRepository;
 import com.rentatools.repository.AlquilerRepositoryImpl;
 import com.rentatools.repository.ClienteRepository;
@@ -21,7 +24,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
-/** Reglas de negocio del modulo Alquileres. */
+/** Reglas de negocio del modulo Alquileres (la venta). Puede nacer de una solicitud aprobada o ser directo. */
 public class AlquilerService {
 
     // ===== Reglas de cobro y plazos (valores propuestos: se pueden ajustar aqui) =====
@@ -87,9 +90,36 @@ public class AlquilerService {
     }
 
     // ---------- Registro ----------
-    /** Devuelve el numero del alquiler creado. */
+    /** Alquiler directo (sin solicitud). Devuelve el numero del alquiler creado. */
     public int registrar(int clienteId, int usuarioId, LocalDate prevista,
                          List<Integer> equipoIds, String observaciones)
+            throws ValidacionException, SQLException {
+        return registrarInterno(clienteId, usuarioId, prevista, equipoIds, observaciones, 0);
+    }
+
+    /** Convierte una solicitud APROBADA en alquiler. El alquiler inicia hoy. */
+    public int registrarDesdeSolicitud(Solicitud s, int usuarioId) throws ValidacionException, SQLException {
+        if (s == null) {
+            throw new ValidacionException("La solicitud no existe");
+        }
+        if (!"APROBADA".equals(s.getEstado())) {
+            throw new ValidacionException("Solo se pueden convertir en alquiler las solicitudes aprobadas");
+        }
+        List<Integer> ids = new ArrayList<>();
+        for (DetalleSolicitud d : s.getDetalles()) {
+            ids.add(d.getEquipoId());
+        }
+        String obs = "Solicitud N.º " + s.getId()
+                + (s.getObservaciones().isEmpty() ? "" : " · " + s.getObservaciones());
+        if (obs.length() > 255) {
+            obs = obs.substring(0, 255);
+        }
+        LocalDate prevista = hoy().plusDays(s.getDiasSolicitados());
+        return registrarInterno(s.getClienteId(), usuarioId, prevista, ids, obs, s.getId());
+    }
+
+    private int registrarInterno(int clienteId, int usuarioId, LocalDate prevista,
+                                 List<Integer> equipoIds, String observaciones, int solicitudId)
             throws ValidacionException, SQLException {
 
         List<String> errores = new ArrayList<>();
@@ -151,6 +181,7 @@ public class AlquilerService {
         BigDecimal igv = subtotal.multiply(IGV).setScale(2, RoundingMode.HALF_UP);
 
         Alquiler a = new Alquiler();
+        a.setSolicitudId(solicitudId);
         a.setClienteId(clienteId);
         a.setUsuarioId(usuarioId);
         a.setFechaInicio(hoy);
@@ -162,11 +193,16 @@ public class AlquilerService {
         a.setObservaciones(obs);
         a.setDetalles(detalles);
 
-        List<String> noDisponibles = repositorio.registrar(a);
-        if (!noDisponibles.isEmpty()) {
-            throw new ValidacionException("Los equipos " + String.join(", ", noDisponibles)
-                    + " acaban de ser alquilados por otro usuario");
+        // El repositorio devuelve los motivos por los que no pudo registrar (equipo ocupado, solicitud ya atendida...)
+        List<String> conflictos = repositorio.registrar(a);
+        if (!conflictos.isEmpty()) {
+            throw new ValidacionException(conflictos);
         }
+
+        // Patron Observer: el alquiler ya esta guardado; se avisa a los suscriptores
+        // (emision del comprobante y de la guia de entrega) sin que este servicio los conozca
+        AlquilerEventos.getInstancia().notificar(a);
+
         return a.getId();
     }
 

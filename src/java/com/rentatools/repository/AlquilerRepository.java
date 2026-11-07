@@ -24,8 +24,9 @@ public interface AlquilerRepository {
 
     /**
      * Registra el alquiler y su detalle y marca los equipos como ALQUILADO, todo en una transaccion.
-     * Devuelve los codigos de los equipos que ya no estaban disponibles; si la lista no esta vacia,
-     * no se guardo nada.
+     * Si el alquiler nace de una solicitud, tambien la marca como ATENDIDA.
+     * Devuelve los motivos por los que no se pudo registrar (equipo ocupado, solicitud ya atendida);
+     * si la lista no esta vacia, no se guardo nada.
      */
     List<String> registrar(Alquiler alquiler) throws SQLException;
 

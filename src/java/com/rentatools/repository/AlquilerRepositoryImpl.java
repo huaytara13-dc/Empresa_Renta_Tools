@@ -7,6 +7,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Types;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
@@ -20,7 +21,7 @@ import java.util.List;
 public class AlquilerRepositoryImpl implements AlquilerRepository {
 
     private static final String SELECT_BASE =
-            "SELECT a.id, a.cliente_id, a.usuario_id, a.fecha_inicio, a.fecha_devolucion_prevista, "
+            "SELECT a.id, a.solicitud_id, a.cliente_id, a.usuario_id, a.fecha_inicio, a.fecha_devolucion_prevista, "
           + "a.fecha_devolucion_real, a.subtotal, a.igv, a.garantia, a.total, a.estado, a.observaciones, "
           + "a.fecha_creacion, c.nombres AS cli_nombres, c.apellidos AS cli_apellidos, "
           + "c.tipo_documento, c.numero_documento, u.usuario AS usuario_nombre, "
@@ -136,30 +137,43 @@ public class AlquilerRepositoryImpl implements AlquilerRepository {
     // ---------------------- transacciones ----------------------
     @Override
     public List<String> registrar(Alquiler a) throws SQLException {
-        List<String> noDisponibles = new ArrayList<>();
+        List<String> conflictos = new ArrayList<>();
 
         try (Connection con = ConexionBD.getInstancia().nuevaConexion()) {
             con.setAutoCommit(false);
             try {
+                // 0) Si nace de una solicitud, se marca ATENDIDA (solo si seguia APROBADA: evita convertirla dos veces)
+                if (a.getSolicitudId() > 0) {
+                    try (PreparedStatement ps = con.prepareStatement(
+                            "UPDATE solicitudes_alquiler SET estado = 'ATENDIDA' WHERE id = ? AND estado = 'APROBADA'")) {
+                        ps.setInt(1, a.getSolicitudId());
+                        if (ps.executeUpdate() == 0) {
+                            con.rollback();
+                            conflictos.add("La solicitud ya no está aprobada o ya fue atendida");
+                            return conflictos;
+                        }
+                    }
+                }
+
                 // 1) Reservar cada equipo: solo si sigue DISPONIBLE (evita alquilar el mismo equipo dos veces)
                 String reservar = "UPDATE equipos SET estado = 'ALQUILADO' WHERE id = ? AND estado = 'DISPONIBLE'";
                 try (PreparedStatement ps = con.prepareStatement(reservar)) {
                     for (DetalleAlquiler d : a.getDetalles()) {
                         ps.setInt(1, d.getEquipoId());
                         if (ps.executeUpdate() == 0) {
-                            noDisponibles.add(d.getEquipoCodigo());
+                            conflictos.add("El equipo " + d.getEquipoCodigo() + " ya no está disponible");
                         }
                     }
                 }
-                if (!noDisponibles.isEmpty()) {
+                if (!conflictos.isEmpty()) {
                     con.rollback();
-                    return noDisponibles;
+                    return conflictos;
                 }
 
                 // 2) Cabecera
                 String insertar = "INSERT INTO alquileres (cliente_id, usuario_id, fecha_inicio, "
-                        + "fecha_devolucion_prevista, subtotal, igv, garantia, total, estado, observaciones) "
-                        + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVO', ?) RETURNING id";
+                        + "fecha_devolucion_prevista, subtotal, igv, garantia, total, estado, observaciones, solicitud_id) "
+                        + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVO', ?, ?) RETURNING id";
                 try (PreparedStatement ps = con.prepareStatement(insertar)) {
                     ps.setInt(1, a.getClienteId());
                     ps.setInt(2, a.getUsuarioId());
@@ -170,6 +184,11 @@ public class AlquilerRepositoryImpl implements AlquilerRepository {
                     ps.setBigDecimal(7, a.getGarantia());
                     ps.setBigDecimal(8, a.getTotal());
                     ps.setString(9, a.getObservaciones());
+                    if (a.getSolicitudId() > 0) {
+                        ps.setInt(10, a.getSolicitudId());
+                    } else {
+                        ps.setNull(10, Types.INTEGER);
+                    }
                     try (ResultSet rs = ps.executeQuery()) {
                         if (rs.next()) {
                             a.setId(rs.getInt(1));
@@ -193,7 +212,7 @@ public class AlquilerRepositoryImpl implements AlquilerRepository {
                 }
 
                 con.commit();
-                return noDisponibles;
+                return conflictos;
 
             } catch (SQLException ex) {
                 con.rollback();
@@ -223,6 +242,17 @@ public class AlquilerRepositoryImpl implements AlquilerRepository {
                     ps.setInt(1, id);
                     ps.executeUpdate();
                 }
+                // Sus documentos tambien quedan anulados
+                try (PreparedStatement ps = con.prepareStatement(
+                        "UPDATE comprobantes SET estado = 'ANULADO' WHERE alquiler_id = ?")) {
+                    ps.setInt(1, id);
+                    ps.executeUpdate();
+                }
+                try (PreparedStatement ps = con.prepareStatement(
+                        "UPDATE guias_entrega SET estado = 'ANULADA' WHERE alquiler_id = ?")) {
+                    ps.setInt(1, id);
+                    ps.executeUpdate();
+                }
                 con.commit();
                 return true;
             } catch (SQLException ex) {
@@ -236,6 +266,8 @@ public class AlquilerRepositoryImpl implements AlquilerRepository {
     private Alquiler mapear(ResultSet rs) throws SQLException {
         Alquiler a = new Alquiler();
         a.setId(rs.getInt("id"));
+        int idSolicitud = rs.getInt("solicitud_id");
+        a.setSolicitudId(rs.wasNull() ? 0 : idSolicitud);
         a.setClienteId(rs.getInt("cliente_id"));
         a.setUsuarioId(rs.getInt("usuario_id"));
         a.setFechaInicio(rs.getObject("fecha_inicio", LocalDate.class));

@@ -2,13 +2,20 @@
 <%@page import="java.time.LocalDate"%>
 <%@page import="com.rentatools.model.Alquiler"%>
 <%@page import="com.rentatools.model.DetalleAlquiler"%>
+<%@page import="com.rentatools.model.Comprobante"%>
 <%@page import="com.rentatools.model.Devolucion"%>
+<%@page import="com.rentatools.model.GuiaEntrega"%>
+<%@page import="com.rentatools.service.ComprobanteService"%>
+<%@page import="com.rentatools.service.GuiaService"%>
 <%@page import="com.rentatools.service.AlquilerService"%>
 <% String tituloPagina = "Alquiler"; String menuActivo = "alquileres"; %>
 <%@ include file="fragmentos/cabecera.jspf" %>
 <%
     Alquiler al = (Alquiler) request.getAttribute("alquiler");
     Devolucion devolucion = (Devolucion) request.getAttribute("devolucion");
+    Comprobante comprobante = (Comprobante) request.getAttribute("comprobante");
+    GuiaEntrega guia = (GuiaEntrega) request.getAttribute("guia");
+    boolean alquilerAnulado = "ANULADO".equals(al.getEstado());
     LocalDate hoy = (LocalDate) request.getAttribute("hoy");
     String csrf = (String) request.getAttribute("csrf");
     String flashTipo = (String) request.getAttribute("flashTipo");
@@ -53,6 +60,10 @@
             <dl class="row mb-0">
                 <dt class="col-sm-4 fw-normal text-secondary">Cliente</dt>
                 <dd class="col-sm-8"><%= Html.esc(al.getClienteNombre()) %> · <%= Html.esc(al.getClienteDocumento()) %></dd>
+                <% if (al.getSolicitudId() > 0) { %>
+                <dt class="col-sm-4 fw-normal text-secondary">Solicitud de origen</dt>
+                <dd class="col-sm-8"><a href="<%= ctx %>/solicitudes?accion=ver&amp;id=<%= al.getSolicitudId() %>">N.º <%= al.getSolicitudId() %></a></dd>
+                <% } %>
                 <dt class="col-sm-4 fw-normal text-secondary">Fecha de inicio</dt>
                 <dd class="col-sm-8"><%= al.getFechaInicio() %></dd>
                 <dt class="col-sm-4 fw-normal text-secondary">Devolución prevista</dt>
@@ -89,6 +100,43 @@
     </div>
 
     <div class="col-12 col-xl-4">
+        <section class="card p-4 mb-3">
+            <h2 class="h5 fw-bold mb-3">Documentos</h2>
+
+            <div class="mb-3">
+                <div class="text-secondary small mb-1">Comprobante de pago</div>
+                <% if (comprobante != null) { %>
+                <a class="fw-semibold text-decoration-none" href="<%= ctx %>/comprobantes?accion=ver&amp;id=<%= comprobante.getId() %>"><%= comprobante.getNumeroCompleto() %></a>
+                <span class="badge text-bg-light border"><%= Html.esc(ComprobanteService.etiquetaTipo(comprobante.getTipo())) %></span>
+                <% if ("ANULADO".equals(comprobante.getEstado())) { %><span class="badge text-bg-secondary">Anulado</span><% } %>
+                <% } else if (!alquilerAnulado) { %>
+                <div class="small text-warning-emphasis mb-2">Pendiente de emitir.</div>
+                <form method="post" action="<%= ctx %>/comprobantes">
+                    <input type="hidden" name="accion" value="emitir">
+                    <input type="hidden" name="alquilerId" value="<%= al.getId() %>">
+                    <input type="hidden" name="csrf" value="<%= Html.esc(csrf) %>">
+                    <button type="submit" class="btn btn-sm btn-outline-primary">Emitir comprobante</button>
+                </form>
+                <% } else { %><span class="text-secondary">—</span><% } %>
+            </div>
+
+            <div>
+                <div class="text-secondary small mb-1">Guía de entrega</div>
+                <% if (guia != null) { %>
+                <a class="fw-semibold text-decoration-none" href="<%= ctx %>/guias?accion=ver&amp;id=<%= guia.getId() %>"><%= guia.getNumeroCompleto() %></a>
+                <span class="badge <%= GuiaService.claseEstado(guia.getEstado()) %>"><%= Html.esc(GuiaService.etiquetaEstado(guia.getEstado())) %></span>
+                <% } else if (!alquilerAnulado) { %>
+                <div class="small text-warning-emphasis mb-2">Pendiente de emitir.</div>
+                <form method="post" action="<%= ctx %>/guias">
+                    <input type="hidden" name="accion" value="emitir">
+                    <input type="hidden" name="alquilerId" value="<%= al.getId() %>">
+                    <input type="hidden" name="csrf" value="<%= Html.esc(csrf) %>">
+                    <button type="submit" class="btn btn-sm btn-outline-primary">Emitir guía de entrega</button>
+                </form>
+                <% } else { %><span class="text-secondary">—</span><% } %>
+            </div>
+        </section>
+
         <section class="card p-4">
             <h2 class="h5 fw-bold mb-3">Montos</h2>
             <dl class="row mb-0">
