@@ -24,6 +24,11 @@ public final class ConexionBD {
 
     private Connection conexion;
 
+    /** Solo se pregunta a la BD si la conexion sigue viva cuando estuvo inactiva mas de este tiempo
+     *  (isValid hace un viaje a la red; hacerlo en cada consulta duplicaba la latencia). */
+    private static final long INTERVALO_VALIDACION_MS = 30_000;
+    private long ultimoUso = 0;
+
     private final String url;
     private final String user;
     private final String pass;
@@ -44,9 +49,13 @@ public final class ConexionBD {
 
     /** Conexion compartida (Singleton). No la cierre quien la usa. */
     public synchronized Connection getConexion() throws SQLException {
-        if (conexion == null || conexion.isClosed() || !conexion.isValid(2)) {
+        long ahora = System.currentTimeMillis();
+        boolean revisar = conexion == null || conexion.isClosed()
+                || (ahora - ultimoUso > INTERVALO_VALIDACION_MS && !conexion.isValid(2));
+        if (revisar) {
             conexion = abrirConexion();
         }
+        ultimoUso = ahora;
         return conexion;
     }
 

@@ -9,10 +9,12 @@
     String csrf = (String) request.getAttribute("csrf");
     String flashTipo = (String) request.getAttribute("flashTipo");
     String flashMensaje = (String) request.getAttribute("flashMensaje");
-    int activos = 0;
-    for (Proveedor x : proveedores) {
-        if ("ACTIVO".equals(x.getEstado())) activos++;
-    }
+    @SuppressWarnings("unchecked")
+    java.util.Map<String, Integer> conteos = (java.util.Map<String, Integer>) request.getAttribute("conteos");
+    int total = 0;
+    for (int n : conteos.values()) total += n;
+    String busqueda = ((com.rentatools.model.Pagina<?>) request.getAttribute("pag")).getQ();
+    int activos = conteos.getOrDefault("ACTIVO", 0);
 %>
 
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
@@ -31,16 +33,20 @@
 <% } %>
 
 <div class="row g-3 mb-4">
-    <div class="col-12 col-md-4"><div class="card kpi p-3"><div class="titulo">Proveedores registrados</div><div class="valor"><%= proveedores.size() %></div></div></div>
+    <div class="col-12 col-md-4"><div class="card kpi p-3"><div class="titulo">Proveedores registrados</div><div class="valor"><%= total %></div></div></div>
     <div class="col-12 col-md-4"><div class="card kpi verde p-3"><div class="titulo">Activos</div><div class="valor"><%= activos %></div></div></div>
-    <div class="col-12 col-md-4"><div class="card kpi naranja p-3"><div class="titulo">Inactivos</div><div class="valor"><%= proveedores.size() - activos %></div></div></div>
+    <div class="col-12 col-md-4"><div class="card kpi naranja p-3"><div class="titulo">Inactivos</div><div class="valor"><%= total - activos %></div></div></div>
 </div>
 
 <section class="card p-4">
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
         <h2 class="h5 fw-bold mb-0">Lista de proveedores</h2>
-        <input type="text" id="buscar" class="form-control" style="max-width: 280px"
-               placeholder="Buscar proveedor…" aria-label="Buscar proveedor">
+        <form method="get" action="<%= ctx %>/proveedores" class="d-flex gap-2">
+            <input type="text" name="q" value="<%= Html.esc(busqueda) %>" class="form-control" style="max-width: 280px"
+                   placeholder="Buscar proveedor…" aria-label="Buscar proveedor">
+            <button class="btn btn-outline-primary" type="submit">Buscar</button>
+            <% if (!busqueda.isEmpty()) { %><a class="btn btn-link" href="<%= ctx %>/proveedores">Limpiar</a><% } %>
+        </form>
     </div>
 
     <div class="table-responsive">
@@ -76,7 +82,8 @@
             </tbody>
         </table>
     </div>
-    <% if (proveedores.isEmpty()) { %><p class="text-secondary mb-0">Aún no hay proveedores registrados.</p><% } %>
+    <% if (proveedores.isEmpty()) { %><p class="text-secondary mb-0"><%= busqueda.isEmpty() ? "Aún no hay proveedores registrados." : "No se encontraron resultados para la búsqueda." %></p><% } %>
+    <%@ include file="fragmentos/paginacion.jspf" %>
 </section>
 
 <div class="modal fade" id="modalEliminar" tabindex="-1" aria-labelledby="tituloEliminar" aria-hidden="true">
@@ -102,12 +109,6 @@
 </div>
 
 <script>
-    document.getElementById('buscar').addEventListener('input', function () {
-        var q = this.value.toLowerCase();
-        document.querySelectorAll('#tablaProveedores tbody tr').forEach(function (tr) {
-            tr.style.display = tr.textContent.toLowerCase().indexOf(q) > -1 ? '' : 'none';
-        });
-    });
     document.getElementById('modalEliminar').addEventListener('show.bs.modal', function (ev) {
         var b = ev.relatedTarget;
         document.getElementById('idEliminar').value = b.getAttribute('data-id');

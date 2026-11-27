@@ -9,14 +9,13 @@
     List<Solicitud> solicitudes = (List<Solicitud>) request.getAttribute("solicitudes");
     String flashTipo = (String) request.getAttribute("flashTipo");
     String flashMensaje = (String) request.getAttribute("flashMensaje");
-    int pendientes = 0, aprobadas = 0, atendidas = 0, otras = 0;
-    for (Solicitud q : solicitudes) {
-        String e = q.getEstado();
-        if ("PENDIENTE".equals(e)) pendientes++;
-        else if ("APROBADA".equals(e)) aprobadas++;
-        else if ("ATENDIDA".equals(e)) atendidas++;
-        else otras++;
-    }
+    @SuppressWarnings("unchecked")
+    java.util.Map<String, Integer> conteos = (java.util.Map<String, Integer>) request.getAttribute("conteos");
+    String busqueda = ((com.rentatools.model.Pagina<?>) request.getAttribute("pag")).getQ();
+    int pendientes = conteos.getOrDefault("PENDIENTE", 0);
+    int aprobadas = conteos.getOrDefault("APROBADA", 0);
+    int atendidas = conteos.getOrDefault("ATENDIDA", 0);
+    int otras = conteos.getOrDefault("RECHAZADA", 0) + conteos.getOrDefault("ANULADA", 0);
 %>
 
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
@@ -44,8 +43,12 @@
 <section class="card p-4">
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
         <h2 class="h5 fw-bold mb-0">Lista de solicitudes</h2>
-        <input type="text" id="buscar" class="form-control" style="max-width: 280px"
-               placeholder="Buscar solicitud…" aria-label="Buscar solicitud">
+        <form method="get" action="<%= ctx %>/solicitudes" class="d-flex gap-2">
+            <input type="text" name="q" value="<%= Html.esc(busqueda) %>" class="form-control" style="max-width: 280px"
+                   placeholder="Buscar solicitud…" aria-label="Buscar solicitud">
+            <button class="btn btn-outline-primary" type="submit">Buscar</button>
+            <% if (!busqueda.isEmpty()) { %><a class="btn btn-link" href="<%= ctx %>/solicitudes">Limpiar</a><% } %>
+        </form>
     </div>
 
     <div class="table-responsive">
@@ -75,16 +78,11 @@
             </tbody>
         </table>
     </div>
-    <% if (solicitudes.isEmpty()) { %><p class="text-secondary mb-0">Aún no hay solicitudes registradas.</p><% } %>
+    <% if (solicitudes.isEmpty()) { %><p class="text-secondary mb-0"><%= busqueda.isEmpty() ? "Aún no hay solicitudes registradas." : "No se encontraron resultados para la búsqueda." %></p><% } %>
+    <%@ include file="fragmentos/paginacion.jspf" %>
 </section>
 
 <script>
-    document.getElementById('buscar').addEventListener('input', function () {
-        var q = this.value.toLowerCase();
-        document.querySelectorAll('#tablaSolicitudes tbody tr').forEach(function (tr) {
-            tr.style.display = tr.textContent.toLowerCase().indexOf(q) > -1 ? '' : 'none';
-        });
-    });
 </script>
 
 <%@ include file="fragmentos/pie.jspf" %>

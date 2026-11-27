@@ -1,5 +1,8 @@
 package com.rentatools.controller;
 
+import com.rentatools.model.Pagina;
+import com.rentatools.util.Paginacion;
+
 import com.rentatools.model.Alquiler;
 import com.rentatools.model.Comprobante;
 import com.rentatools.service.AlquilerService;
@@ -46,7 +49,13 @@ public class ComprobanteServlet extends HttpServlet {
                 consumirFlash(request);
                 request.getRequestDispatcher(VISTAS + "comprobante-detalle.jsp").forward(request, response);
             } else {
-                request.setAttribute("comprobantes", servicio.listar());
+                String qLista = Paginacion.texto(request.getParameter("q"));
+                int nPagina = Paginacion.entero(request.getParameter("pagina"), 1);
+                Pagina<Comprobante> pagLista = servicio.listarPagina(qLista, nPagina);
+                request.setAttribute("comprobantes", pagLista.getItems());
+                request.setAttribute("pag", pagLista);
+                boolean vivo = "1".equals(request.getParameter("vivo"));   // busqueda en vivo: no recalcular indicadores
+                request.setAttribute("ind", vivo ? Paginacion.ceros("emitidos", "boletas", "facturas", "facturado") : servicio.indicadores());
                 consumirFlash(request);
                 request.getRequestDispatcher(VISTAS + "comprobantes.jsp").forward(request, response);
             }

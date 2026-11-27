@@ -27,6 +27,16 @@ public class ComprobanteService {
     }
 
     // ---------- Consultas ----------
+    /** Una pagina del listado, con busqueda opcional. */
+    public com.rentatools.model.Pagina<Comprobante> listarPagina(String q, int pagina) throws SQLException {
+        return repositorio.listarPagina(q, pagina, com.rentatools.util.Paginacion.TAMANO);
+    }
+
+    /** Indicadores de la pantalla calculados sobre toda la tabla. */
+    public java.util.Map<String, java.math.BigDecimal> indicadores() throws SQLException {
+        return repositorio.indicadores();
+    }
+
     public List<Comprobante> listar() throws SQLException {
         return repositorio.listarTodos();
     }

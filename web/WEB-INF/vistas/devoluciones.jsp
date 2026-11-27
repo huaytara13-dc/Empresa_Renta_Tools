@@ -9,13 +9,13 @@
     List<Devolucion> devoluciones = (List<Devolucion>) request.getAttribute("devoluciones");
     String flashTipo = (String) request.getAttribute("flashTipo");
     String flashMensaje = (String) request.getAttribute("flashMensaje");
-    int conRetraso = 0, conPenalidad = 0;
-    BigDecimal sumaPenalidades = BigDecimal.ZERO;
-    for (Devolucion q : devoluciones) {
-        if (q.getDiasRetraso() > 0) conRetraso++;
-        if (q.getPenalidadTotal().signum() > 0) conPenalidad++;
-        sumaPenalidades = sumaPenalidades.add(q.getPenalidadTotal());
-    }
+    @SuppressWarnings("unchecked")
+    java.util.Map<String, java.math.BigDecimal> ind = (java.util.Map<String, java.math.BigDecimal>) request.getAttribute("ind");
+    String busqueda = ((com.rentatools.model.Pagina<?>) request.getAttribute("pag")).getQ();
+    int totalDev = ind.get("total").intValue();
+    int conRetraso = ind.get("conRetraso").intValue();
+    int conPenalidad = ind.get("conPenalidad").intValue();
+    BigDecimal sumaPenalidades = ind.get("sumaPenalidades");
 %>
 
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
@@ -34,7 +34,7 @@
 <% } %>
 
 <div class="row g-3 mb-4">
-    <div class="col-12 col-md-6 col-xl-3"><div class="card kpi p-3"><div class="titulo">Devoluciones registradas</div><div class="valor"><%= devoluciones.size() %></div></div></div>
+    <div class="col-12 col-md-6 col-xl-3"><div class="card kpi p-3"><div class="titulo">Devoluciones registradas</div><div class="valor"><%= totalDev %></div></div></div>
     <div class="col-12 col-md-6 col-xl-3"><div class="card kpi naranja p-3"><div class="titulo">Con retraso</div><div class="valor"><%= conRetraso %></div></div></div>
     <div class="col-12 col-md-6 col-xl-3"><div class="card kpi p-3" style="border-top-color: #a32a12"><div class="titulo">Con penalidad</div><div class="valor"><%= conPenalidad %></div></div></div>
     <div class="col-12 col-md-6 col-xl-3"><div class="card kpi verde p-3"><div class="titulo">Penalidades acumuladas</div><div class="valor fs-2">S/ <%= sumaPenalidades.toPlainString() %></div></div></div>
@@ -43,8 +43,12 @@
 <section class="card p-4">
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
         <h2 class="h5 fw-bold mb-0">Lista de devoluciones</h2>
-        <input type="text" id="buscar" class="form-control" style="max-width: 280px"
-               placeholder="Buscar devolución…" aria-label="Buscar devolución">
+        <form method="get" action="<%= ctx %>/devoluciones" class="d-flex gap-2">
+            <input type="text" name="q" value="<%= Html.esc(busqueda) %>" class="form-control" style="max-width: 280px"
+                   placeholder="Buscar devolución…" aria-label="Buscar devolución">
+            <button class="btn btn-outline-primary" type="submit">Buscar</button>
+            <% if (!busqueda.isEmpty()) { %><a class="btn btn-link" href="<%= ctx %>/devoluciones">Limpiar</a><% } %>
+        </form>
     </div>
 
     <div class="table-responsive">
@@ -74,16 +78,11 @@
             </tbody>
         </table>
     </div>
-    <% if (devoluciones.isEmpty()) { %><p class="text-secondary mb-0">Aún no hay devoluciones registradas.</p><% } %>
+    <% if (devoluciones.isEmpty()) { %><p class="text-secondary mb-0"><%= busqueda.isEmpty() ? "Aún no hay devoluciones registradas." : "No se encontraron resultados para la búsqueda." %></p><% } %>
+    <%@ include file="fragmentos/paginacion.jspf" %>
 </section>
 
 <script>
-    document.getElementById('buscar').addEventListener('input', function () {
-        var q = this.value.toLowerCase();
-        document.querySelectorAll('#tablaDevoluciones tbody tr').forEach(function (tr) {
-            tr.style.display = tr.textContent.toLowerCase().indexOf(q) > -1 ? '' : 'none';
-        });
-    });
 </script>
 
 <%@ include file="fragmentos/pie.jspf" %>

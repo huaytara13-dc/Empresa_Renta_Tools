@@ -1,0 +1,80 @@
+<%-- Botones de paginacion. Usa el atributo "pag" (Pagina) que envia el servlet. --%>
+<%
+    com.rentatools.model.Pagina<?> pgnPag = (com.rentatools.model.Pagina<?>) request.getAttribute("pag");
+    if (pgnPag != null && pgnPag.getTotal() > 0) {
+        // Tras un forward, getServletPath() devuelve la ruta del JSP; la ruta real esta en este atributo
+        String pgnRuta = (String) request.getAttribute("jakarta.servlet.forward.servlet_path");
+        if (pgnRuta == null) pgnRuta = request.getServletPath();
+        String pgnBase = request.getContextPath() + pgnRuta + "?q="
+                + java.net.URLEncoder.encode(pgnPag.getQ(), "UTF-8") + "&pagina=";
+        int pgnTotal = pgnPag.getTotalPaginas();
+        int pgnActual = pgnPag.getPagina();
+        int pgnFin = Math.min(pgnTotal, Math.max(1, pgnActual - 2) + 4);
+        int pgnIni = Math.max(1, pgnFin - 4);
+%>
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-3">
+    <span class="text-secondary small">
+        Mostrando <%= pgnPag.getDesde() %>&ndash;<%= pgnPag.getHasta() %> de <%= pgnPag.getTotal() %> registros
+    </span>
+    <% if (pgnTotal > 1) { %>
+    <nav aria-label="Paginaci&oacute;n">
+        <ul class="pagination pagination-sm mb-0">
+            <li class="page-item <%= pgnActual == 1 ? "disabled" : "" %>">
+                <a class="page-link" href="<%= Html.esc(pgnBase + (pgnActual - 1)) %>">Anterior</a>
+            </li>
+            <% if (pgnIni > 1) { %>
+            <li class="page-item"><a class="page-link" href="<%= Html.esc(pgnBase + 1) %>">1</a></li>
+            <% if (pgnIni > 2) { %><li class="page-item disabled"><span class="page-link">&hellip;</span></li><% } %>
+            <% } %>
+            <% for (int pgnN = pgnIni; pgnN <= pgnFin; pgnN++) { %>
+            <li class="page-item <%= pgnN == pgnActual ? "active" : "" %>">
+                <a class="page-link" href="<%= Html.esc(pgnBase + pgnN) %>"><%= pgnN %></a>
+            </li>
+            <% } %>
+            <% if (pgnFin < pgnTotal) { %>
+            <% if (pgnFin < pgnTotal - 1) { %><li class="page-item disabled"><span class="page-link">&hellip;</span></li><% } %>
+            <li class="page-item"><a class="page-link" href="<%= Html.esc(pgnBase + pgnTotal) %>"><%= pgnTotal %></a></li>
+            <% } %>
+            <li class="page-item <%= pgnActual == pgnTotal ? "disabled" : "" %>">
+                <a class="page-link" href="<%= Html.esc(pgnBase + (pgnActual + 1)) %>">Siguiente</a>
+            </li>
+        </ul>
+    </nav>
+    <% } %>
+</div>
+<% } %>
+
+<%-- Busqueda en vivo: mientras se escribe, se pide al servidor la lista filtrada y se reemplaza la tabla --%>
+<script>
+(function () {
+    if (window.__buscadorVivo) return;
+    window.__buscadorVivo = true;
+    var input = document.querySelector('section input[name="q"]');
+    if (!input) return;
+    var form = input.form, sec = input.closest('section'), temporizador = null, control = null;
+
+    function buscar() {
+        var url = form.getAttribute('action') + '?q=' + encodeURIComponent(input.value.trim()) + '&pagina=1&vivo=1';
+        if (control) control.abort();
+        control = new AbortController();
+        fetch(url, { credentials: 'same-origin', signal: control.signal })
+            .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
+            .then(function (html) {
+                var doc = new DOMParser().parseFromString(html, 'text/html');
+                var campo = doc.querySelector('section input[name="q"]');
+                var nueva = campo && campo.closest('section');
+                if (!nueva) return;
+                while (sec.children.length > 1) sec.removeChild(sec.lastElementChild);
+                Array.prototype.slice.call(nueva.children, 1).forEach(function (el) {
+                    if (el.tagName !== 'SCRIPT') sec.appendChild(document.importNode(el, true));
+                });
+            })
+            .catch(function (e) { if (e.name !== 'AbortError') console.error(e); });
+    }
+
+    input.addEventListener('input', function () {
+        clearTimeout(temporizador);
+        temporizador = setTimeout(buscar, 200);
+    });
+})();
+</script>

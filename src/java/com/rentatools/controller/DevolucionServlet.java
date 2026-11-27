@@ -1,5 +1,8 @@
 package com.rentatools.controller;
 
+import com.rentatools.model.Pagina;
+import com.rentatools.util.Paginacion;
+
 import com.rentatools.model.Alquiler;
 import com.rentatools.model.DetalleAlquiler;
 import com.rentatools.model.Devolucion;
@@ -132,7 +135,13 @@ public class DevolucionServlet extends HttpServlet {
     private void listar(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException, SQLException {
 
-        request.setAttribute("devoluciones", servicio.listar());
+        String qLista = Paginacion.texto(request.getParameter("q"));
+        int nPagina = Paginacion.entero(request.getParameter("pagina"), 1);
+        Pagina<Devolucion> pagLista = servicio.listarPagina(qLista, nPagina);
+        request.setAttribute("devoluciones", pagLista.getItems());
+        request.setAttribute("pag", pagLista);
+        boolean vivo = "1".equals(request.getParameter("vivo"));   // busqueda en vivo: no recalcular indicadores
+        request.setAttribute("ind", vivo ? Paginacion.ceros("total", "conRetraso", "conPenalidad", "sumaPenalidades") : servicio.indicadores());
         consumirFlash(request);
         request.getRequestDispatcher(VISTAS + "devoluciones.jsp").forward(request, response);
     }

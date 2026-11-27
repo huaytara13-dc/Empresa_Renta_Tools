@@ -1,5 +1,7 @@
 package com.rentatools.repository;
 
+import java.util.Map;
+import com.rentatools.model.Pagina;
 import com.rentatools.model.Comprobante;
 import java.sql.SQLException;
 import java.util.List;
@@ -8,6 +10,12 @@ import java.util.List;
 public interface ComprobanteRepository {
 
     List<Comprobante> listarTodos() throws SQLException;
+
+    /** Una pagina del listado (con busqueda opcional). */
+    Pagina<Comprobante> listarPagina(String q, int pagina, int tamano) throws SQLException;
+
+    /** Indicadores de la pantalla calculados con SQL sobre toda la tabla. */
+    Map<String, java.math.BigDecimal> indicadores() throws SQLException;
 
     Comprobante buscarPorId(int id) throws SQLException;
 

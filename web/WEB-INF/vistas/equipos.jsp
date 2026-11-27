@@ -10,12 +10,14 @@
     String csrf = (String) request.getAttribute("csrf");
     String flashTipo = (String) request.getAttribute("flashTipo");
     String flashMensaje = (String) request.getAttribute("flashMensaje");
-    int disponibles = 0, alquilados = 0, enRevision = 0;
-    for (Equipo q : equipos) {
-        if ("DISPONIBLE".equals(q.getEstado())) disponibles++;
-        else if ("ALQUILADO".equals(q.getEstado())) alquilados++;
-        else if ("MANTENIMIENTO".equals(q.getEstado()) || "INCIDENCIA".equals(q.getEstado())) enRevision++;
-    }
+    @SuppressWarnings("unchecked")
+    java.util.Map<String, Integer> conteos = (java.util.Map<String, Integer>) request.getAttribute("conteos");
+    int total = 0;
+    for (int n : conteos.values()) total += n;
+    String busqueda = ((com.rentatools.model.Pagina<?>) request.getAttribute("pag")).getQ();
+    int disponibles = conteos.getOrDefault("DISPONIBLE", 0);
+    int alquilados = conteos.getOrDefault("ALQUILADO", 0);
+    int enRevision = conteos.getOrDefault("MANTENIMIENTO", 0) + conteos.getOrDefault("INCIDENCIA", 0);
 %>
 
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
@@ -36,7 +38,7 @@
 <% } %>
 
 <div class="row g-3 mb-4">
-    <div class="col-12 col-md-6 col-xl-3"><div class="card kpi p-3"><div class="titulo">Total de equipos</div><div class="valor"><%= equipos.size() %></div></div></div>
+    <div class="col-12 col-md-6 col-xl-3"><div class="card kpi p-3"><div class="titulo">Total de equipos</div><div class="valor"><%= total %></div></div></div>
     <div class="col-12 col-md-6 col-xl-3"><div class="card kpi verde p-3"><div class="titulo">Disponibles</div><div class="valor"><%= disponibles %></div></div></div>
     <div class="col-12 col-md-6 col-xl-3"><div class="card kpi p-3"><div class="titulo">Alquilados</div><div class="valor"><%= alquilados %></div></div></div>
     <div class="col-12 col-md-6 col-xl-3"><div class="card kpi naranja p-3"><div class="titulo">En mantenimiento o con incidencia</div><div class="valor"><%= enRevision %></div></div></div>
@@ -45,8 +47,12 @@
 <section class="card p-4">
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
         <h2 class="h5 fw-bold mb-0">Lista de equipos</h2>
-        <input type="text" id="buscar" class="form-control" style="max-width: 280px"
-               placeholder="Buscar equipo…" aria-label="Buscar equipo">
+        <form method="get" action="<%= ctx %>/equipos" class="d-flex gap-2">
+            <input type="text" name="q" value="<%= Html.esc(busqueda) %>" class="form-control" style="max-width: 280px"
+                   placeholder="Buscar equipo…" aria-label="Buscar equipo">
+            <button class="btn btn-outline-primary" type="submit">Buscar</button>
+            <% if (!busqueda.isEmpty()) { %><a class="btn btn-link" href="<%= ctx %>/equipos">Limpiar</a><% } %>
+        </form>
     </div>
 
     <div class="table-responsive">
@@ -87,7 +93,8 @@
             </tbody>
         </table>
     </div>
-    <% if (equipos.isEmpty()) { %><p class="text-secondary mb-0">Aún no hay equipos registrados.</p><% } %>
+    <% if (equipos.isEmpty()) { %><p class="text-secondary mb-0"><%= busqueda.isEmpty() ? "Aún no hay equipos registrados." : "No se encontraron resultados para la búsqueda." %></p><% } %>
+    <%@ include file="fragmentos/paginacion.jspf" %>
 </section>
 
 <% if (esAdmin) { %>
@@ -115,12 +122,6 @@
 <% } %>
 
 <script>
-    document.getElementById('buscar').addEventListener('input', function () {
-        var q = this.value.toLowerCase();
-        document.querySelectorAll('#tablaEquipos tbody tr').forEach(function (tr) {
-            tr.style.display = tr.textContent.toLowerCase().indexOf(q) > -1 ? '' : 'none';
-        });
-    });
     var modal = document.getElementById('modalEliminar');
     if (modal) {
         modal.addEventListener('show.bs.modal', function (ev) {

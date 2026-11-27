@@ -9,12 +9,12 @@
     List<GuiaEntrega> guias = (List<GuiaEntrega>) request.getAttribute("guias");
     String flashTipo = (String) request.getAttribute("flashTipo");
     String flashMensaje = (String) request.getAttribute("flashMensaje");
-    int pendientes = 0, entregadas = 0, anuladas = 0;
-    for (GuiaEntrega q : guias) {
-        if ("EMITIDA".equals(q.getEstado())) pendientes++;
-        else if ("ENTREGADA".equals(q.getEstado())) entregadas++;
-        else anuladas++;
-    }
+    @SuppressWarnings("unchecked")
+    java.util.Map<String, Integer> conteos = (java.util.Map<String, Integer>) request.getAttribute("conteos");
+    String busqueda = ((com.rentatools.model.Pagina<?>) request.getAttribute("pag")).getQ();
+    int pendientes = conteos.getOrDefault("EMITIDA", 0);
+    int entregadas = conteos.getOrDefault("ENTREGADA", 0);
+    int anuladas = conteos.getOrDefault("ANULADA", 0);
 %>
 
 <div class="mb-4">
@@ -38,8 +38,12 @@
 <section class="card p-4">
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
         <h2 class="h5 fw-bold mb-0">Lista de guías</h2>
-        <input type="text" id="buscar" class="form-control" style="max-width: 280px"
-               placeholder="Buscar guía…" aria-label="Buscar guía">
+        <form method="get" action="<%= ctx %>/guias" class="d-flex gap-2">
+            <input type="text" name="q" value="<%= Html.esc(busqueda) %>" class="form-control" style="max-width: 280px"
+                   placeholder="Buscar guía…" aria-label="Buscar guía">
+            <button class="btn btn-outline-primary" type="submit">Buscar</button>
+            <% if (!busqueda.isEmpty()) { %><a class="btn btn-link" href="<%= ctx %>/guias">Limpiar</a><% } %>
+        </form>
     </div>
 
     <div class="table-responsive">
@@ -63,16 +67,11 @@
             </tbody>
         </table>
     </div>
-    <% if (guias.isEmpty()) { %><p class="text-secondary mb-0">Aún no hay guías emitidas.</p><% } %>
+    <% if (guias.isEmpty()) { %><p class="text-secondary mb-0"><%= busqueda.isEmpty() ? "Aún no hay guías emitidas." : "No se encontraron resultados para la búsqueda." %></p><% } %>
+    <%@ include file="fragmentos/paginacion.jspf" %>
 </section>
 
 <script>
-    document.getElementById('buscar').addEventListener('input', function () {
-        var q = this.value.toLowerCase();
-        document.querySelectorAll('#tablaGuias tbody tr').forEach(function (tr) {
-            tr.style.display = tr.textContent.toLowerCase().indexOf(q) > -1 ? '' : 'none';
-        });
-    });
 </script>
 
 <%@ include file="fragmentos/pie.jspf" %>

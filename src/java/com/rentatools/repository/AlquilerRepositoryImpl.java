@@ -1,5 +1,9 @@
 package com.rentatools.repository;
 
+import java.util.Map;
+import java.util.LinkedHashMap;
+import com.rentatools.util.Paginacion;
+import com.rentatools.model.Pagina;
 import com.rentatools.model.Alquiler;
 import com.rentatools.model.DetalleAlquiler;
 import com.rentatools.util.ConexionBD;
@@ -45,6 +49,37 @@ public class AlquilerRepositoryImpl implements AlquilerRepository {
             }
         }
         return lista;
+    }
+
+    @Override
+    public Pagina<Alquiler> listarPagina(String q, int pagina, int tamano) throws SQLException {
+        String[] cols = {"CAST(a.id AS TEXT)", "c.nombres", "c.apellidos", "(c.nombres || ' ' || c.apellidos)", "c.numero_documento", "u.usuario", "a.estado"};
+        String where = Paginacion.where(q, cols);
+        String base = SELECT_BASE;
+
+        int total;
+        try (PreparedStatement ps = con().prepareStatement("SELECT COUNT(*) FROM (" + base + where + ") t")) {
+            Paginacion.asignar(ps, q, cols.length);
+            try (ResultSet rs = ps.executeQuery()) {
+                rs.next();
+                total = rs.getInt(1);
+            }
+        }
+
+        int actual = Paginacion.ajustar(pagina, total, tamano);
+        List<Alquiler> lista = new ArrayList<>();
+        String sql = base + where + " ORDER BY a.id DESC LIMIT ? OFFSET ?";
+        try (PreparedStatement ps = con().prepareStatement(sql)) {
+            int i = Paginacion.asignar(ps, q, cols.length);
+            ps.setInt(i++, tamano);
+            ps.setInt(i, (actual - 1) * tamano);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    lista.add(mapear(rs));
+                }
+            }
+        }
+        return new Pagina<>(lista, actual, tamano, total, q);
     }
 
     @Override

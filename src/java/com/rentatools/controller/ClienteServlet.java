@@ -1,7 +1,9 @@
 package com.rentatools.controller;
 
 import com.rentatools.model.Cliente;
+import com.rentatools.model.Pagina;
 import com.rentatools.model.Usuario;
+import com.rentatools.util.Paginacion;
 import com.rentatools.service.ClienteService;
 import com.rentatools.service.ValidacionException;
 import com.rentatools.util.CsrfUtil;
@@ -145,7 +147,13 @@ public class ClienteServlet extends HttpServlet {
     private void listar(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException, SQLException {
 
-        request.setAttribute("clientes", servicio.listar());
+        String q = Paginacion.texto(request.getParameter("q"));
+        int numPagina = Paginacion.entero(request.getParameter("pagina"), 1);
+        Pagina<Cliente> pag = servicio.listarPagina(q, numPagina);
+        request.setAttribute("clientes", pag.getItems());
+        request.setAttribute("pag", pag);
+        boolean vivo = "1".equals(request.getParameter("vivo"));   // busqueda en vivo: no recalcular indicadores
+        request.setAttribute("conteos", vivo ? java.util.Collections.<String, Integer>emptyMap() : servicio.contarPorEstado());
         request.setAttribute("csrf", CsrfUtil.token(request.getSession()));
 
         HttpSession sesion = request.getSession();

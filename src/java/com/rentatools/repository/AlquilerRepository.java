@@ -1,5 +1,7 @@
 package com.rentatools.repository;
 
+import java.util.Map;
+import com.rentatools.model.Pagina;
 import com.rentatools.model.Alquiler;
 import java.sql.SQLException;
 import java.time.LocalDate;
@@ -9,6 +11,10 @@ import java.util.List;
 public interface AlquilerRepository {
 
     List<Alquiler> listarTodos() throws SQLException;
+
+    /** Una pagina del listado (con busqueda opcional). */
+    Pagina<Alquiler> listarPagina(String q, int pagina, int tamano) throws SQLException;
+
 
     /** Alquileres activos que vencen hasta la fecha limite (incluye los ya vencidos). */
     List<Alquiler> listarAlertas(LocalDate limite) throws SQLException;

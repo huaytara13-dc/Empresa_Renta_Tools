@@ -1,5 +1,9 @@
 package com.rentatools.repository;
 
+import java.util.Map;
+import java.util.LinkedHashMap;
+import com.rentatools.util.Paginacion;
+import com.rentatools.model.Pagina;
 import com.rentatools.model.GuiaEntrega;
 import com.rentatools.util.ConexionBD;
 import java.sql.Connection;
@@ -36,6 +40,50 @@ public class GuiaRepositoryImpl implements GuiaRepository {
             }
         }
         return lista;
+    }
+
+    @Override
+    public Pagina<GuiaEntrega> listarPagina(String q, int pagina, int tamano) throws SQLException {
+        String[] cols = {"CAST(g.id AS TEXT)", "g.serie", "CAST(g.numero AS TEXT)", "TRIM(c.nombres || ' ' || c.apellidos)", "c.numero_documento", "g.estado"};
+        String where = Paginacion.where(q, cols);
+        String base = SELECT_BASE;
+
+        int total;
+        try (PreparedStatement ps = con().prepareStatement("SELECT COUNT(*) FROM (" + base + where + ") t")) {
+            Paginacion.asignar(ps, q, cols.length);
+            try (ResultSet rs = ps.executeQuery()) {
+                rs.next();
+                total = rs.getInt(1);
+            }
+        }
+
+        int actual = Paginacion.ajustar(pagina, total, tamano);
+        List<GuiaEntrega> lista = new ArrayList<>();
+        String sql = base + where + " ORDER BY g.id DESC LIMIT ? OFFSET ?";
+        try (PreparedStatement ps = con().prepareStatement(sql)) {
+            int i = Paginacion.asignar(ps, q, cols.length);
+            ps.setInt(i++, tamano);
+            ps.setInt(i, (actual - 1) * tamano);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    lista.add(mapear(rs));
+                }
+            }
+        }
+        return new Pagina<>(lista, actual, tamano, total, q);
+    }
+
+    @Override
+    public Map<String, Integer> contarPorEstado() throws SQLException {
+        Map<String, Integer> m = new LinkedHashMap<>();
+        String sql = "SELECT estado, COUNT(*) FROM guias_entrega GROUP BY estado";
+        try (PreparedStatement ps = con().prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                m.put(rs.getString(1), rs.getInt(2));
+            }
+        }
+        return m;
     }
 
     @Override

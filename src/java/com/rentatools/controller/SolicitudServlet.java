@@ -1,5 +1,8 @@
 package com.rentatools.controller;
 
+import com.rentatools.model.Pagina;
+import com.rentatools.util.Paginacion;
+
 import com.rentatools.model.Cliente;
 import com.rentatools.model.DetalleSolicitud;
 import com.rentatools.model.Equipo;
@@ -79,7 +82,13 @@ public class SolicitudServlet extends HttpServlet {
                     break;
                 }
                 default:
-                    request.setAttribute("solicitudes", servicio.listar());
+                    String qLista = Paginacion.texto(request.getParameter("q"));
+                    int nPagina = Paginacion.entero(request.getParameter("pagina"), 1);
+                    Pagina<Solicitud> pagLista = servicio.listarPagina(qLista, nPagina);
+                    request.setAttribute("solicitudes", pagLista.getItems());
+                    request.setAttribute("pag", pagLista);
+                    boolean vivo = "1".equals(request.getParameter("vivo"));   // busqueda en vivo: no recalcular indicadores
+                    request.setAttribute("conteos", vivo ? java.util.Collections.<String, Integer>emptyMap() : servicio.contarPorEstado());
                     consumirFlash(request);
                     request.getRequestDispatcher(VISTAS + "solicitudes.jsp").forward(request, response);
             }

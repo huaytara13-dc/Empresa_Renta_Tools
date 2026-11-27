@@ -1,5 +1,7 @@
 package com.rentatools.repository;
 
+import java.util.Map;
+import com.rentatools.model.Pagina;
 import com.rentatools.model.GuiaEntrega;
 import java.sql.SQLException;
 import java.util.List;
@@ -8,6 +10,12 @@ import java.util.List;
 public interface GuiaRepository {
 
     List<GuiaEntrega> listarTodos() throws SQLException;
+
+    /** Una pagina del listado (con busqueda opcional). */
+    Pagina<GuiaEntrega> listarPagina(String q, int pagina, int tamano) throws SQLException;
+
+    /** Cantidad de registros por estado (indicadores). */
+    Map<String, Integer> contarPorEstado() throws SQLException;
 
     GuiaEntrega buscarPorId(int id) throws SQLException;
 

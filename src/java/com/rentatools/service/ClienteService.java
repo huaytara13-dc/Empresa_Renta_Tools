@@ -21,6 +21,16 @@ public class ClienteService {
     private final ClienteRepository repositorio = new ClienteRepositoryImpl();
 
     // ---------- Consultas ----------
+    /** Una pagina del listado, con busqueda opcional (Etapa de paginacion). */
+    public com.rentatools.model.Pagina<Cliente> listarPagina(String q, int pagina) throws SQLException {
+        return repositorio.listarPagina(q, pagina, com.rentatools.util.Paginacion.TAMANO);
+    }
+
+    /** Cantidad de registros por estado, para los indicadores de la pantalla. */
+    public java.util.Map<String, Integer> contarPorEstado() throws SQLException {
+        return repositorio.contarPorEstado();
+    }
+
     public List<Cliente> listar() throws SQLException {
         return repositorio.listarTodos();
     }

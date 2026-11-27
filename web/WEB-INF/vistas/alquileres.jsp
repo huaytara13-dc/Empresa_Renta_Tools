@@ -11,17 +11,11 @@
     LocalDate hoy = (LocalDate) request.getAttribute("hoy");
     String flashTipo = (String) request.getAttribute("flashTipo");
     String flashMensaje = (String) request.getAttribute("flashMensaje");
-    int activos = 0, porVencer = 0, vencidos = 0, finalizados = 0;
-    for (Alquiler q : alquileres) {
-        if ("ACTIVO".equals(q.getEstado())) {
-            activos++;
-            long d = AlquilerService.diasRestantes(q, hoy);
-            if (d < 0) vencidos++;
-            else if (d <= AlquilerService.DIAS_AVISO) porVencer++;
-        } else if ("FINALIZADO".equals(q.getEstado())) {
-            finalizados++;
-        }
-    }
+    String busqueda = ((com.rentatools.model.Pagina<?>) request.getAttribute("pag")).getQ();
+    int activos = (Integer) request.getAttribute("kActivos");
+    int porVencer = (Integer) request.getAttribute("kPorVencer");
+    int vencidos = (Integer) request.getAttribute("kVencidos");
+    int finalizados = (Integer) request.getAttribute("kFinalizados");
 %>
 
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
@@ -49,8 +43,12 @@
 <section class="card p-4">
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
         <h2 class="h5 fw-bold mb-0">Lista de alquileres</h2>
-        <input type="text" id="buscar" class="form-control" style="max-width: 280px"
-               placeholder="Buscar alquiler…" aria-label="Buscar alquiler">
+        <form method="get" action="<%= ctx %>/alquileres" class="d-flex gap-2">
+            <input type="text" name="q" value="<%= Html.esc(busqueda) %>" class="form-control" style="max-width: 280px"
+                   placeholder="Buscar alquiler…" aria-label="Buscar alquiler">
+            <button class="btn btn-outline-primary" type="submit">Buscar</button>
+            <% if (!busqueda.isEmpty()) { %><a class="btn btn-link" href="<%= ctx %>/alquileres">Limpiar</a><% } %>
+        </form>
     </div>
 
     <div class="table-responsive">
@@ -87,16 +85,11 @@
             </tbody>
         </table>
     </div>
-    <% if (alquileres.isEmpty()) { %><p class="text-secondary mb-0">Aún no hay alquileres registrados.</p><% } %>
+    <% if (alquileres.isEmpty()) { %><p class="text-secondary mb-0"><%= busqueda.isEmpty() ? "Aún no hay alquileres registrados." : "No se encontraron resultados para la búsqueda." %></p><% } %>
+    <%@ include file="fragmentos/paginacion.jspf" %>
 </section>
 
 <script>
-    document.getElementById('buscar').addEventListener('input', function () {
-        var q = this.value.toLowerCase();
-        document.querySelectorAll('#tablaAlquileres tbody tr').forEach(function (tr) {
-            tr.style.display = tr.textContent.toLowerCase().indexOf(q) > -1 ? '' : 'none';
-        });
-    });
 </script>
 
 <%@ include file="fragmentos/pie.jspf" %>

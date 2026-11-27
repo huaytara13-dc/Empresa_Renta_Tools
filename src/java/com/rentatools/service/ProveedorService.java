@@ -25,6 +25,16 @@ public class ProveedorService {
     private final ProveedorRepository repositorio = new ProveedorRepositoryImpl();
 
     // ---------- Consultas ----------
+    /** Una pagina del listado, con busqueda opcional (Etapa de paginacion). */
+    public com.rentatools.model.Pagina<Proveedor> listarPagina(String q, int pagina) throws SQLException {
+        return repositorio.listarPagina(q, pagina, com.rentatools.util.Paginacion.TAMANO);
+    }
+
+    /** Cantidad de registros por estado, para los indicadores de la pantalla. */
+    public java.util.Map<String, Integer> contarPorEstado() throws SQLException {
+        return repositorio.contarPorEstado();
+    }
+
     public List<Proveedor> listar() throws SQLException {
         return repositorio.listarTodos();
     }

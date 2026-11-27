@@ -10,15 +10,13 @@
     List<Comprobante> comprobantes = (List<Comprobante>) request.getAttribute("comprobantes");
     String flashTipo = (String) request.getAttribute("flashTipo");
     String flashMensaje = (String) request.getAttribute("flashMensaje");
-    int emitidos = 0, boletas = 0, facturas = 0;
-    BigDecimal facturado = BigDecimal.ZERO;
-    for (Comprobante q : comprobantes) {
-        if ("EMITIDO".equals(q.getEstado())) {
-            emitidos++;
-            facturado = facturado.add(q.getTotal());
-            if ("FACTURA".equals(q.getTipo())) facturas++; else boletas++;
-        }
-    }
+    @SuppressWarnings("unchecked")
+    java.util.Map<String, java.math.BigDecimal> ind = (java.util.Map<String, java.math.BigDecimal>) request.getAttribute("ind");
+    String busqueda = ((com.rentatools.model.Pagina<?>) request.getAttribute("pag")).getQ();
+    int emitidos = ind.get("emitidos").intValue();
+    int boletas = ind.get("boletas").intValue();
+    int facturas = ind.get("facturas").intValue();
+    BigDecimal facturado = ind.get("facturado");
 %>
 
 <div class="mb-4">
@@ -43,8 +41,12 @@
 <section class="card p-4">
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
         <h2 class="h5 fw-bold mb-0">Lista de comprobantes</h2>
-        <input type="text" id="buscar" class="form-control" style="max-width: 280px"
-               placeholder="Buscar comprobante…" aria-label="Buscar comprobante">
+        <form method="get" action="<%= ctx %>/comprobantes" class="d-flex gap-2">
+            <input type="text" name="q" value="<%= Html.esc(busqueda) %>" class="form-control" style="max-width: 280px"
+                   placeholder="Buscar comprobante…" aria-label="Buscar comprobante">
+            <button class="btn btn-outline-primary" type="submit">Buscar</button>
+            <% if (!busqueda.isEmpty()) { %><a class="btn btn-link" href="<%= ctx %>/comprobantes">Limpiar</a><% } %>
+        </form>
     </div>
 
     <div class="table-responsive">
@@ -69,16 +71,11 @@
             </tbody>
         </table>
     </div>
-    <% if (comprobantes.isEmpty()) { %><p class="text-secondary mb-0">Aún no hay comprobantes emitidos.</p><% } %>
+    <% if (comprobantes.isEmpty()) { %><p class="text-secondary mb-0"><%= busqueda.isEmpty() ? "Aún no hay comprobantes emitidos." : "No se encontraron resultados para la búsqueda." %></p><% } %>
+    <%@ include file="fragmentos/paginacion.jspf" %>
 </section>
 
 <script>
-    document.getElementById('buscar').addEventListener('input', function () {
-        var q = this.value.toLowerCase();
-        document.querySelectorAll('#tablaComprobantes tbody tr').forEach(function (tr) {
-            tr.style.display = tr.textContent.toLowerCase().indexOf(q) > -1 ? '' : 'none';
-        });
-    });
 </script>
 
 <%@ include file="fragmentos/pie.jspf" %>

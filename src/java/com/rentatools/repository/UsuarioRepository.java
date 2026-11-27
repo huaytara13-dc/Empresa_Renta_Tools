@@ -1,8 +1,10 @@
 package com.rentatools.repository;
 
 import com.rentatools.model.Usuario;
+import com.rentatools.model.Pagina;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Patron REPOSITORY (Etapa 4).
@@ -13,6 +15,12 @@ import java.util.List;
 public interface UsuarioRepository {
 
     List<Usuario> listarTodos() throws SQLException;
+
+    /** Una pagina del listado (con busqueda opcional). */
+    Pagina<Usuario> listarPagina(String q, int pagina, int tamano) throws SQLException;
+
+    /** Cantidad de registros por estado (para los indicadores). */
+    Map<String, Integer> contarPorEstado() throws SQLException;
 
     Usuario buscarPorId(int id) throws SQLException;
 

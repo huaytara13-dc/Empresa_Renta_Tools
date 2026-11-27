@@ -1,5 +1,8 @@
 package com.rentatools.controller;
 
+import com.rentatools.model.Pagina;
+import com.rentatools.util.Paginacion;
+
 import com.rentatools.model.Alquiler;
 import com.rentatools.model.Cliente;
 import com.rentatools.model.Comprobante;
@@ -178,7 +181,16 @@ public class AlquilerServlet extends HttpServlet {
     private void listar(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException, SQLException {
 
-        request.setAttribute("alquileres", servicio.listar());
+        String qLista = Paginacion.texto(request.getParameter("q"));
+        int nPagina = Paginacion.entero(request.getParameter("pagina"), 1);
+        Pagina<Alquiler> pagLista = servicio.listarPagina(qLista, nPagina);
+        request.setAttribute("alquileres", pagLista.getItems());
+        request.setAttribute("pag", pagLista);
+        boolean vivo = "1".equals(request.getParameter("vivo"));   // busqueda en vivo: no recalcular indicadores
+        request.setAttribute("kActivos", vivo ? 0 : servicio.contarActivos());
+        request.setAttribute("kPorVencer", vivo ? 0 : servicio.contarPorVencer());
+        request.setAttribute("kVencidos", vivo ? 0 : servicio.contarVencidos());
+        request.setAttribute("kFinalizados", vivo ? 0 : servicio.contarFinalizados());
         request.setAttribute("hoy", AlquilerService.hoy());
         consumirFlash(request);
         request.getRequestDispatcher(VISTAS + "alquileres.jsp").forward(request, response);

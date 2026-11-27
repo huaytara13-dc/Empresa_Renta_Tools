@@ -1,5 +1,9 @@
 package com.rentatools.repository;
 
+import java.util.Map;
+import java.util.LinkedHashMap;
+import com.rentatools.util.Paginacion;
+import com.rentatools.model.Pagina;
 import com.rentatools.model.Comprobante;
 import com.rentatools.util.ConexionBD;
 import java.sql.Connection;
@@ -32,6 +36,53 @@ public class ComprobanteRepositoryImpl implements ComprobanteRepository {
             }
         }
         return lista;
+    }
+
+    @Override
+    public Pagina<Comprobante> listarPagina(String q, int pagina, int tamano) throws SQLException {
+        String[] cols = {"CAST(id AS TEXT)", "serie", "CAST(numero AS TEXT)", "cliente_nombre", "cliente_documento", "tipo", "estado"};
+        String where = Paginacion.where(q, cols);
+        String base = ("SELECT " + COLUMNAS + " FROM comprobantes ");
+
+        int total;
+        try (PreparedStatement ps = con().prepareStatement("SELECT COUNT(*) FROM (" + base + where + ") t")) {
+            Paginacion.asignar(ps, q, cols.length);
+            try (ResultSet rs = ps.executeQuery()) {
+                rs.next();
+                total = rs.getInt(1);
+            }
+        }
+
+        int actual = Paginacion.ajustar(pagina, total, tamano);
+        List<Comprobante> lista = new ArrayList<>();
+        String sql = base + where + " ORDER BY id DESC LIMIT ? OFFSET ?";
+        try (PreparedStatement ps = con().prepareStatement(sql)) {
+            int i = Paginacion.asignar(ps, q, cols.length);
+            ps.setInt(i++, tamano);
+            ps.setInt(i, (actual - 1) * tamano);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    lista.add(mapear(rs));
+                }
+            }
+        }
+        return new Pagina<>(lista, actual, tamano, total, q);
+    }
+
+    @Override
+    public Map<String, java.math.BigDecimal> indicadores() throws SQLException {
+        Map<String, java.math.BigDecimal> m = new LinkedHashMap<>();
+        String sql = "SELECT COUNT(*) FILTER (WHERE estado = 'EMITIDO') AS emitidos, COUNT(*) FILTER (WHERE estado = 'EMITIDO' AND tipo = 'BOLETA') AS boletas, COUNT(*) FILTER (WHERE estado = 'EMITIDO' AND tipo = 'FACTURA') AS facturas, COALESCE(SUM(total) FILTER (WHERE estado = 'EMITIDO'), 0) AS facturado FROM comprobantes";
+        try (PreparedStatement ps = con().prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            if (rs.next()) {
+                m.put("emitidos", rs.getBigDecimal("emitidos"));
+                m.put("boletas", rs.getBigDecimal("boletas"));
+                m.put("facturas", rs.getBigDecimal("facturas"));
+                m.put("facturado", rs.getBigDecimal("facturado"));
+            }
+        }
+        return m;
     }
 
     @Override

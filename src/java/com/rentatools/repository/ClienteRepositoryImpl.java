@@ -1,14 +1,18 @@
 package com.rentatools.repository;
 
 import com.rentatools.model.Cliente;
+import com.rentatools.model.Pagina;
 import com.rentatools.util.ConexionBD;
+import com.rentatools.util.Paginacion;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /** Implementacion JDBC / PostgreSQL. La conexion viene del Singleton y no se cierra aqui. */
 public class ClienteRepositoryImpl implements ClienteRepository {
@@ -31,6 +35,50 @@ public class ClienteRepositoryImpl implements ClienteRepository {
             }
         }
         return lista;
+    }
+
+    @Override
+    public Pagina<Cliente> listarPagina(String q, int pagina, int tamano) throws SQLException {
+        String[] cols = {"numero_documento", "nombres", "apellidos", "(nombres || ' ' || apellidos)", "telefono", "correo", "estado"};
+        String where = Paginacion.where(q, cols);
+
+        int total;
+        try (PreparedStatement ps = con().prepareStatement("SELECT COUNT(*) FROM clientes" + where)) {
+            Paginacion.asignar(ps, q, cols.length);
+            try (ResultSet rs = ps.executeQuery()) {
+                rs.next();
+                total = rs.getInt(1);
+            }
+        }
+
+        int actual = Paginacion.ajustar(pagina, total, tamano);
+        List<Cliente> lista = new ArrayList<>();
+        String sql = "SELECT " + COLUMNAS + " FROM clientes" + where
+                + " ORDER BY id DESC LIMIT ? OFFSET ?";
+        try (PreparedStatement ps = con().prepareStatement(sql)) {
+            int i = Paginacion.asignar(ps, q, cols.length);
+            ps.setInt(i++, tamano);
+            ps.setInt(i, (actual - 1) * tamano);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    lista.add(mapear(rs));
+                }
+            }
+        }
+        return new Pagina<>(lista, actual, tamano, total, q);
+    }
+
+    @Override
+    public Map<String, Integer> contarPorEstado() throws SQLException {
+        Map<String, Integer> m = new LinkedHashMap<>();
+        String sql = "SELECT estado, COUNT(*) FROM clientes GROUP BY estado";
+        try (PreparedStatement ps = con().prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                m.put(rs.getString(1), rs.getInt(2));
+            }
+        }
+        return m;
     }
 
     @Override

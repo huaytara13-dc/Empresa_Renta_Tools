@@ -64,6 +64,15 @@ public class AlquilerService {
     }
 
     // ---------- Consultas ----------
+    /** Una pagina del listado, con busqueda opcional. */
+    public com.rentatools.model.Pagina<Alquiler> listarPagina(String q, int pagina) throws SQLException {
+        return repositorio.listarPagina(q, pagina, com.rentatools.util.Paginacion.TAMANO);
+    }
+
+    public int contarFinalizados() throws SQLException {
+        return repositorio.contarPorEstado("FINALIZADO");
+    }
+
     public List<Alquiler> listar() throws SQLException {
         return repositorio.listarTodos();
     }

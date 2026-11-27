@@ -1,5 +1,8 @@
 package com.rentatools.controller;
 
+import com.rentatools.model.Pagina;
+import com.rentatools.util.Paginacion;
+
 import com.rentatools.model.Alquiler;
 import com.rentatools.model.GuiaEntrega;
 import com.rentatools.service.AlquilerService;
@@ -46,7 +49,13 @@ public class GuiaServlet extends HttpServlet {
                 consumirFlash(request);
                 request.getRequestDispatcher(VISTAS + "guia-detalle.jsp").forward(request, response);
             } else {
-                request.setAttribute("guias", servicio.listar());
+                String qLista = Paginacion.texto(request.getParameter("q"));
+                int nPagina = Paginacion.entero(request.getParameter("pagina"), 1);
+                Pagina<GuiaEntrega> pagLista = servicio.listarPagina(qLista, nPagina);
+                request.setAttribute("guias", pagLista.getItems());
+                request.setAttribute("pag", pagLista);
+                boolean vivo = "1".equals(request.getParameter("vivo"));   // busqueda en vivo: no recalcular indicadores
+                request.setAttribute("conteos", vivo ? java.util.Collections.<String, Integer>emptyMap() : servicio.contarPorEstado());
                 consumirFlash(request);
                 request.getRequestDispatcher(VISTAS + "guias.jsp").forward(request, response);
             }
